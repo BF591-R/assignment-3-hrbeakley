@@ -35,7 +35,7 @@ suppressPackageStartupMessages(library(tidyverse))
 #' @examples 
 #' `data <- load_expression('/project/bf528/project_1/data/example_intensity_data.csv')`
 load_expression <- function(filepath) {
-    return(NULL)
+  return(read_csv(filepath))
 }
 
 #' Filter 15% of the gene expression values.
@@ -51,7 +51,12 @@ load_expression <- function(filepath) {
 #' `tibble [40,158 × 1] (S3: tbl_df/tbl/data.frame)`
 #' `$ probe: chr [1:40158] "1007_s_at" "1053_at" "117_at" "121_at" ...`
 filter_15 <- function(tibble){
-    return(NULL)
+  n <- ncol(tibble)
+  expr <- tibble[-1] > log2(15)
+  
+  tibble %>%
+    filter(rowMeans(expr, na.rm = TRUE) >= 0.15) %>%
+    select(probe)
 }
 
 #### Gene name conversion ####
@@ -79,7 +84,20 @@ filter_15 <- function(tibble){
 #' `4        1553551_s_at      MT-ND2`
 #' `5           202860_at     DENND4B`
 affy_to_hgnc <- function(affy_vector) {
-    return(NULL)
+  affy_ids <- pull(affy_vector, 1)
+  
+  hum_mart <- useEnsembl(
+    biomart = "ENSEMBL_MART_ENSEMBL",
+    dataset = "hsapiens_gene_ensembl"
+  )
+  gene_info <- getBM(
+    attributes = c("affy_hg_u133_plus_2", "hgnc_symbol"),  # What we want
+    filters = "affy_hg_u133_plus_2",                            # What we're searching by
+    values = affy_ids,                                 # The specific genes (mgi_symbol) to search for
+    mart = hum_mart                                  # Which database
+  )
+  
+  return(as_tibble(gene_info))
 }
 
 #' Reduce a tibble of expression data to only the rows in good_genes or bad_genes.
@@ -112,7 +130,17 @@ affy_to_hgnc <- function(affy_vector) {
 #' `1 202860_at   DENND4B good        7.16      ...`
 #' `2 204340_at   TMEM187 good        6.40      ...`
 reduce_data <- function(expr_tibble, names_ids, good_genes, bad_genes){
-    return(NULL)
+  expr_tibble %>%
+    left_join(names_ids, by = c("probe" = "affy_hg_u133_plus_2")) %>%
+    mutate(
+      gene_set = case_when(
+        hgnc_symbol %in% good_genes ~ "good",
+        hgnc_symbol %in% bad_genes ~ "bad",
+        TRUE ~ "neither"
+      )
+      ) %>%
+    filter(gene_set != "neither") %>% 
+    select(probe, hgnc_symbol, gene_set, everything())
 }
 
 #' Convert a wide format tibble to long for easy plotting
@@ -126,6 +154,10 @@ reduce_data <- function(expr_tibble, names_ids, good_genes, bad_genes){
 #'
 #' @examples
 convert_to_long <- function(tibble) {
-    return(NULL)
+  tibble %>%
+    pivot_longer(
+     cols =  starts_with("GSM"),
+     names_to = "sample"
+    )
 }
 

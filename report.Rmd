@@ -230,8 +230,19 @@ expression values for the 'good' and 'bad' gene sets. Please use ggplot2 to
 construct a boxplot akin to the one you see in the reference_report.html. You
 do *not* need to do this in a function, use the space provided below to create
 this plot. 
+
 ```{r boxplot from long format data using ggplot2, echo=FALSE}
 library(ggplot2)
 
-
+ggplot(long_format_data, 
+       aes(
+         x = hgnc_symbol,
+         y = value,
+         fill = gene_set
+       )) + geom_boxplot() +
+  labs(x = "Gene Set",
+       y = "Expression Value") +
+  theme_minimal() +
+  theme(axis.text.x = element_text(angle = 90, hjust = 1, vjust = 0.5))
+  
 ```
